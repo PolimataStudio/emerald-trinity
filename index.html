@@ -95,7 +95,9 @@ main{position:fixed;inset:0}
 .video-btn span{background:#ff4444}
 .video-btn.recording span{border-radius:6px;width:28px;height:28px;background:#fff}
 
-/* Tela de Revisão */
+/* ========================================================= */
+/* CORREÇÃO 1: Garantir que elementos [hidden] não sejam exibidos */
+/* ========================================================= */
 .review{position:fixed;inset:0;background:#000;display:none;
   flex-direction:column;z-index:40}
 .review.open{display:flex}
@@ -103,6 +105,8 @@ main{position:fixed;inset:0}
   overflow:hidden;min-height:0;position:relative}
 #review-img, #review-video{width:100%;height:100%;object-fit:contain;
   max-width:100%;max-height:100%;display:block}
+/* A regra abaixo força o esconderijo correto quando o atributo hidden está presente */
+#review-img[hidden], #review-video[hidden] { display: none !important; }
 
 .btn-floating{position:absolute;top:1rem;left:1rem;z-index:50;
   background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;
@@ -238,7 +242,7 @@ input[type=color]{height:40px;padding:2px}
 <div id="review" class="review">
   <button id="btn-back-review" class="btn-floating" aria-label="Voltar">←</button>
   <div class="review-img">
-    <img id="review-img" alt="Prévia da fotografia final">
+    <img id="review-img" alt="Prévia da fotografia final" hidden>
     <video id="review-video" controls playsinline hidden aria-label="Prévia do vídeo"></video>
   </div>
   <div class="review-actions">
@@ -427,7 +431,7 @@ function syncLiveLogo() {
   }
 }
 
-/* ============= COMPOSITOR ============= */
+/* ============= COMPOSITOR (Fotos e Vídeos) ============= */
 async function compose({photoBlob, w, h, captionText}) {
   const url = URL.createObjectURL(photoBlob);
   let img;
@@ -441,7 +445,6 @@ async function compose({photoBlob, w, h, captionText}) {
   const ctx = c.getContext('2d');
   ctx.drawImage(img, 0, 0, realW, realH);
 
-  // Logomarca (canto superior direito)
   if (settings.logoEnabled && logoURL) {
     try {
       const lg = await loadImage(logoURL);
@@ -456,7 +459,6 @@ async function compose({photoBlob, w, h, captionText}) {
     } catch(e) { console.warn('logo', e); }
   }
 
-  // Estampa (canto inferior esquerdo)
   if (settings.stampEnabled) {
     let text = (captionText || '').trim();
     if (settings.includeDateTime) {
@@ -585,7 +587,6 @@ async function captureOrientedFrame(video, targetRatioStr) {
   let isLandscapeRaw = vw > vh;
   let rotate = 0;
 
-  // Lógica matemática para alinhar o frame cru com a rotação do dispositivo
   if (angle === 0 || angle === 180) {
     if (isLandscapeRaw) rotate = angle === 0 ? -Math.PI/2 : Math.PI/2;
     else rotate = angle === 0 ? 0 : Math.PI;
@@ -597,7 +598,6 @@ async function captureOrientedFrame(video, targetRatioStr) {
   let workingW = (Math.abs(rotate) === Math.PI/2) ? vh : vw;
   let workingH = (Math.abs(rotate) === Math.PI/2) ? vw : vh;
 
-  // Desenha em um canvas temporário (já orientado corretamente)
   const temp = document.createElement('canvas');
   temp.width = workingW;
   temp.height = workingH;
@@ -609,7 +609,6 @@ async function captureOrientedFrame(video, targetRatioStr) {
   tctx.drawImage(video, -vw/2, -vh/2, vw, vh);
   tctx.restore();
 
-  // Recorta o centro para o Aspect Ratio escolhido (Cover)
   const workingAR = workingW / workingH;
   let cropW = workingW, cropH = workingH, offX = 0, offY = 0;
   if (workingAR > targetAR) {
@@ -620,7 +619,6 @@ async function captureOrientedFrame(video, targetRatioStr) {
     offY = (workingH - cropH) / 2;
   }
 
-  // Redimensiona para performance
   const maxEdge = 1920;
   const scale = Math.min(1, maxEdge / Math.max(cropW, cropH));
   const finalW = Math.round(cropW * scale);
@@ -647,6 +645,7 @@ let facing = 'environment';
 let mediaRecorder = null;
 let recordedChunks = [];
 let videoMime = '';
+let videoAnimFrameId = null; // <--- NOVO: Controle do loop de animação para gravação de vídeo
 
 async function startCamera() {
   stopCamera();
@@ -678,6 +677,7 @@ async function startCamera() {
 function stopCamera() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   const v = $('#preview'); if (v) v.srcObject = null;
+  if (videoAnimFrameId) { cancelAnimationFrame(videoAnimFrameId); videoAnimFrameId = null; } // <--- NOVO: Limpa o loop
 }
 async function switchCamera() {
   facing = facing === 'environment' ? 'user' : 'environment';
@@ -713,41 +713,122 @@ async function takePhoto() {
   }
 }
 
+/* ========================================================= */
+/* CORREÇÃO 2: Gravação de Vídeo com Estampa usando Canvas */
+/* ========================================================= */
 async function toggleVideoRecording() {
   const btn = $('#btn-video');
   if (mediaRecorder && mediaRecorder.state === 'recording') {
     mediaRecorder.stop();
     btn.classList.remove('recording');
-    setStatus('Câmera pronta');
+    setStatus('Processando vídeo…');
     $('#btn-photo').disabled = false;
-  } else {
-    if (!stream) return;
-    try {
-      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
-      const tracks = [...stream.getVideoTracks()];
-      if (audioStream) tracks.push(...audioStream.getAudioTracks());
-      const combined = new MediaStream(tracks);
+    if (videoAnimFrameId) { cancelAnimationFrame(videoAnimFrameId); videoAnimFrameId = null; }
+    return;
+  }
 
-      recordedChunks = [];
-      videoMime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-      mediaRecorder = new MediaRecorder(combined, { mimeType: videoMime });
+  if (!stream) return;
+  try {
+    // 1. Obter áudio (se disponível)
+    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
+    
+    // 2. Configurar Canvas de Gravação
+    const videoEl = $('#preview');
+    let targetAR = 4/3;
+    if (settings.aspectRatio === '16:9') targetAR = 16/9;
+    else if (settings.aspectRatio === '9:16') targetAR = 9/16;
+    else if (settings.aspectRatio === '1:1') targetAR = 1;
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-      };
+    // Base de resolução para vídeo (HD)
+    let targetW = 1280;
+    let targetH = 720;
+    if (targetAR < 1) { targetW = 720; targetH = Math.round(720 / targetAR); }
+    else { targetW = 1280; targetH = Math.round(1280 / targetAR); }
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: videoMime });
-        showReview(blob, true);
-      };
+    const canvas = document.createElement('canvas');
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext('2d');
 
-      mediaRecorder.start();
-      btn.classList.add('recording');
-      setStatus('Gravando…');
-      $('#btn-photo').disabled = true;
-    } catch(e) {
-      toast('Erro ao iniciar gravação: microfone pode estar bloqueado.');
-    }
+    // 3. Função de desenho contínuo
+    const drawVideoFrame = () => {
+      if (videoEl.readyState >= 2) {
+        const vw = videoEl.videoWidth;
+        const vh = videoEl.videoHeight;
+        
+        // Desenha o vídeo com "cover" (cortando bordas para manter a proporção)
+        const vr = vw / vh;
+        let dx = 0, dy = 0, dw = targetW, dh = targetH;
+        
+        if (vr > targetAR) {
+          dh = targetH; dw = targetH * vr; dx = (targetW - dw) / 2;
+        } else {
+          dw = targetW; dh = targetW / vr; dy = (targetH - dh) / 2;
+        }
+        
+        ctx.drawImage(videoEl, dx, dy, dw, dh);
+
+        // Desenhar Logomarca
+        if (settings.logoEnabled && logoURL) {
+          const img = new Image();
+          img.src = logoURL;
+          if (img.complete) {
+            const lw = targetW * (settings.logoSizePercent / 100);
+            const lh = lw * (img.naturalHeight / img.naturalWidth);
+            const m = targetW * (settings.logoMarginPercent / 100);
+            ctx.drawImage(img, targetW - lw - m, m, lw, lh);
+          }
+        }
+
+        // Desenhar Estampa de Texto
+        if (settings.stampEnabled) {
+          let text = ($('#caption').innerText || '').trim();
+          if (settings.includeDateTime) {
+            const d = new Date();
+            text += (text?'\n':'') + d.toLocaleDateString('pt-BR') + ' ' +
+              d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+          }
+          if (text) drawStamp(ctx, targetW, targetH, text);
+        }
+      }
+      videoAnimFrameId = requestAnimationFrame(drawVideoFrame);
+    };
+    drawVideoFrame();
+
+    // 4. Capturar o stream do Canvas
+    const canvasStream = canvas.captureStream(30); // 30 FPS
+    const tracks = [...canvasStream.getVideoTracks()];
+    
+    if (audioStream) tracks.push(...audioStream.getAudioTracks());
+    const combined = new MediaStream(tracks);
+
+    // 5. Iniciar MediaRecorder com o stream composto
+    recordedChunks = [];
+    videoMime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+    mediaRecorder = new MediaRecorder(combined, { mimeType: videoMime });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: videoMime });
+      showReview(blob, true);
+      setStatus('Câmera pronta');
+      // Limpeza
+      if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+      canvasStream.getTracks().forEach(t => t.stop());
+      canvas.width = 0; canvas.height = 0;
+    };
+
+    mediaRecorder.start();
+    btn.classList.add('recording');
+    setStatus('Gravando…');
+    $('#btn-photo').disabled = true;
+    
+  } catch(e) {
+    toast('Erro ao iniciar gravação: ' + e.message);
+    if (videoAnimFrameId) { cancelAnimationFrame(videoAnimFrameId); videoAnimFrameId = null; }
   }
 }
 
@@ -762,12 +843,15 @@ function showReview(blob, isVideo) {
   const img = $('#review-img');
   const vid = $('#review-video');
 
+  // Lógica para exibir APENAS um dos dois
   if (isVideo) {
     img.hidden = true;
+    img.src = ''; // Limpa o src da imagem
     vid.hidden = false;
     vid.src = reviewURL;
   } else {
     vid.hidden = true;
+    vid.src = ''; // Limpa o src do vídeo
     img.hidden = false;
     img.src = reviewURL;
   }
@@ -1026,6 +1110,7 @@ window.addEventListener('pagehide', () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
     }
+    if (videoAnimFrameId) { cancelAnimationFrame(videoAnimFrameId); videoAnimFrameId = null; }
 });
 
 /* ============= SERVICE WORKER ============= */
