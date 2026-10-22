@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0B3D2E">
+<title>Emerald Trinity — Câmera Institucional</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<style>
+:root{
+  --deep:#0B3D2E;--emerald:#1E7A5A;--gold:#C9A227;--surface:#F7FBF9;
+  --text:#0F1F19;--danger:#B3261E;--r:14px;
+  --stamp-bg: rgba(11,61,46,.85);
+  --stamp-color: #FFFFFF;
+  --stamp-radius: 14px;
+  --stamp-max-width: 55vw;
+  --logo-size: 22vw;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:#000;color:var(--text);overflow:hidden;overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent}
+
+header{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;
+  justify-content:space-between;align-items:center;padding:.7rem 1rem;
+  padding-top:max(.7rem, env(safe-area-inset-top));
+  background:linear-gradient(to bottom,rgba(11,61,46,.78) 0%,rgba(11,61,46,0) 100%);
+  color:#fff;pointer-events:none}
+header h1{font-size:1.05rem;margin:0;font-weight:650;letter-spacing:.02em;
+  text-shadow:0 1px 4px rgba(0,0,0,.55)}
+header .btn{pointer-events:auto;background:rgba(0,0,0,.35)}
+
+main{position:fixed;inset:0}
+.stage{position:absolute;inset:0;background:#000;overflow:hidden}
+.stage video{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;display:block;background:#000}
+
+.live-logo{position:absolute;top:calc(env(safe-area-inset-top,0px) + 3.4rem);
+  right:1rem;max-width:var(--logo-size,22vw);max-height:14vh;object-fit:contain;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.55));pointer-events:none;z-index:3}
+.live-logo[hidden]{display:none}
+
+.caption-editable{
+  position:absolute;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 6.2rem);
+  left:1rem;
+  max-width:var(--stamp-max-width,55vw);
+  min-height:1.6em;
+  padding:.55rem .85rem;
+  background:var(--stamp-bg,rgba(11,61,46,.85));
+  color:var(--stamp-color,#fff);
+  border-radius:var(--stamp-radius,14px);
+  border:1px solid rgba(255,255,255,.35);
+  font-size:.9rem;font-weight:600;line-height:1.35;
+  backdrop-filter:blur(6px);
+  white-space:pre-wrap;
+  overflow-wrap:break-word;
+  word-break:break-word;
+  overflow:hidden;
+  outline:none;cursor:text;z-index:4;
+  box-shadow:0 3px 12px rgba(0,0,0,.35);
+  transition:background .15s,color .15s,border-radius .15s;
+}
+.caption-editable[data-empty="true"]::before{
+  content:attr(data-placeholder);color:rgba(255,255,255,.55);
+  font-weight:400;pointer-events:none}
+.caption-editable:focus-visible{
+  border-color:var(--gold);
+  box-shadow:0 0 0 2px rgba(201,162,39,.45),0 3px 12px rgba(0,0,0,.35)}
+.caption-editable[hidden]{display:none}
+
+.status{position:absolute;top:calc(env(safe-area-inset-top,0px) + 3.4rem);
+  left:1rem;background:rgba(0,0,0,.55);color:#fff;
+  padding:.3rem .7rem;border-radius:999px;font-size:.75rem;
+  backdrop-filter:blur(6px);z-index:4}
+
+.controls{position:absolute;left:0;right:0;
+  bottom:max(1rem,env(safe-area-inset-bottom));
+  display:flex;justify-content:space-around;align-items:center;
+  padding:0 1rem;gap:.5rem;z-index:5}
+.btn{background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;
+  width:48px;height:48px;display:grid;place-items:center;cursor:pointer;
+  font-size:1.2rem;backdrop-filter:blur(4px)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+
+.shutter{width:72px;height:72px;border:4px solid #fff;background:transparent;
+  border-radius:50%;cursor:pointer;display:grid;place-items:center;padding:0;
+  transition:transform .1s}
+.shutter span{width:56px;height:56px;border-radius:50%;background:#fff;display:block}
+.shutter:disabled{opacity:.4}
+.shutter:active{transform:scale(.94)}
+
+.video-btn{border-color:#ff4444}
+.video-btn span{background:#ff4444}
+.video-btn.recording span{border-radius:6px;width:28px;height:28px;background:#fff}
+
+/* Tela de Revisão */
+.review{position:fixed;inset:0;background:#000;display:none;
+  flex-direction:column;z-index:40}
+.review.open{display:flex}
+.review-img{flex:1;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;min-height:0;position:relative}
+#review-img, #review-video{width:100%;height:100%;object-fit:contain;
+  max-width:100%;max-height:100%;display:block}
+
+.btn-floating{position:absolute;top:1rem;left:1rem;z-index:50;
+  background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;
+  width:48px;height:48px;font-size:1.5rem;display:grid;place-items:center;
+  cursor:pointer;backdrop-filter:blur(4px);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+
+.review-actions{display:flex;gap:.5rem;padding:.8rem;background:var(--deep);
+  padding-bottom:max(.8rem,env(safe-area-inset-bottom))}
+.review-actions button{flex:1;padding:.8rem;border-radius:10px;border:none;
+  font-weight:600;cursor:pointer;font-size:.95rem;min-height:44px}
+
+.panel{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;
+  padding:1rem;z-index:30;overflow:auto}
+.panel.open{display:block}
+.panel-inner{background:#fff;border-radius:16px;max-width:520px;
+  margin:1rem auto;padding:1rem;color:var(--text)}
+.panel h2{margin:.2rem 0 1rem;font-size:1.05rem;color:var(--deep)}
+fieldset{border:1px solid #d5e5de;border-radius:12px;padding:.8rem;margin:0 0 .8rem}
+legend{font-weight:600;color:var(--deep);padding:0 .3rem;font-size:.9rem}
+label{display:block;font-size:.88rem;font-weight:550;margin:.5rem 0 .2rem}
+input[type=text],input[type=color],input[type=range],input[type=file],select{
+  width:100%;padding:.5rem;border-radius:8px;border:1px solid #c9dbd3;
+  font-size:.95rem;background:#fff;color:var(--text)}
+input[type=color]{height:40px;padding:2px}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}
+.row > div{flex:1 1 120px}
+.actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+.actions button{flex:1 1 auto;padding:.7rem;border-radius:10px;
+  border:1px solid transparent;font-weight:600;cursor:pointer;
+  font-size:.95rem;min-height:44px}
+.primary{background:var(--emerald);color:#fff}
+.secondary{background:#fff;color:var(--deep);border-color:#c9dbd3}
+.danger{background:#fff3f2;color:var(--danger);border-color:var(--danger)}
+.preview-box{margin-top:.6rem;text-align:center}
+#logo-preview{max-width:90px;max-height:90px;border:1px dashed #c9dbd3;
+  border-radius:8px;padding:.2rem;background:#fff}
+#preview-canvas{width:100%;max-width:400px;border-radius:10px;
+  background:#ddebe4;display:block;margin:0 auto}
+
+#toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);
+  background:var(--deep);color:#fff;padding:.7rem 1.2rem;border-radius:999px;
+  font-size:.9rem;z-index:50;max-width:calc(100vw - 2rem);
+  box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#toast[hidden]{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Emerald Trinity</h1>
+  <button id="open-settings" class="btn" aria-label="Configurações">⚙</button>
+</header>
+
+<main>
+  <div class="stage">
+    <video id="preview" autoplay playsinline muted></video>
+    <img id="live-logo" class="live-logo" alt="Logomarca institucional" hidden>
+    <div id="caption" class="caption-editable" contenteditable="true"
+         role="textbox" aria-multiline="true"
+         aria-label="Descrição da captura"
+         data-placeholder="Descrição da captura"></div>
+    <div class="status" id="status">Inicializando…</div>
+    <div class="controls">
+      <button id="switch-cam" class="btn" aria-label="Alternar câmera" disabled>⇄</button>
+      <button id="btn-photo" class="shutter" aria-label="Capturar foto" disabled><span></span></button>
+      <button id="btn-video" class="shutter video-btn" aria-label="Gravar vídeo" disabled><span></span></button>
+    </div>
+  </div>
+</main>
+
+<div id="settings-panel" class="panel" role="dialog" aria-label="Configurações">
+  <div class="panel-inner">
+    <h2>Configurações institucionais</h2>
+    <fieldset>
+      <legend>Câmera e Captura</legend>
+      <label for="aspect-ratio">Proporção da Imagem (Quadro)</label>
+      <select id="aspect-ratio">
+        <option value="4:3">4:3 (Padrão)</option>
+        <option value="16:9">16:9 (Widescreen)</option>
+        <option value="9:16">9:16 (Vertical)</option>
+        <option value="1:1">1:1 (Quadrado)</option>
+      </select>
+    </fieldset>
+    <fieldset>
+      <legend>Logomarca</legend>
+      <label for="logo-input">Importar (PNG, JPEG, WebP)</label>
+      <input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp">
+      <div class="preview-box">
+        <img id="logo-preview" alt="Prévia da logomarca" hidden>
+        <div><button id="remove-logo" class="secondary"
+          style="padding:.4rem .7rem;border-radius:8px;border:1px solid #c9dbd3;background:#fff;cursor:pointer;margin-top:.4rem"
+          hidden>Remover logomarca</button></div>
+      </div>
+      <label>Tamanho relativo (%) <span id="logo-size-v">15</span>%</label>
+      <input id="logo-size" type="range" min="5" max="30" value="15" step="1">
+      <label>Margem (%) <span id="logo-margin-v">3</span>%</label>
+      <input id="logo-margin" type="range" min="1" max="10" value="3" step="0.5">
+      <label><input id="logo-enabled" type="checkbox" checked> Exibir logomarca</label>
+    </fieldset>
+    <fieldset>
+      <legend>Estampa de descrição</legend>
+      <label for="default-caption">Texto institucional padrão</label>
+      <input id="default-caption" type="text" maxlength="200" placeholder="Ex.: Associação — Evento 2026">
+      <div class="row">
+        <div><label for="bg-color">Fundo</label>
+          <input id="bg-color" type="color" value="#0B3D2E"></div>
+        <div><label for="text-color">Texto</label>
+          <input id="text-color" type="color" value="#FFFFFF"></div>
+      </div>
+      <label>Opacidade do fundo (%) <span id="opacity-v">85</span>%</label>
+      <input id="opacity" type="range" min="20" max="100" value="85" step="5">
+      <label>Largura máxima (%) <span id="maxw-v">55</span>%</label>
+      <input id="maxw" type="range" min="30" max="80" value="55" step="5">
+      <label>Raio dos cantos <span id="radius-v">16</span></label>
+      <input id="radius" type="range" min="0" max="40" value="16" step="2">
+      <label><input id="stamp-enabled" type="checkbox" checked> Exibir estampa</label>
+      <label><input id="include-datetime" type="checkbox"> Incluir data e hora</label>
+    </fieldset>
+    <fieldset>
+      <legend>Pré-visualização</legend>
+      <canvas id="preview-canvas" width="400" height="300"></canvas>
+    </fieldset>
+    <div class="actions">
+      <button id="save-settings" class="primary">Salvar</button>
+      <button id="reset-settings" class="secondary">Restaurar padrões</button>
+      <button id="close-settings" class="secondary">Fechar</button>
+    </div>
+    <div class="actions">
+      <button id="clear-all" class="danger">Limpar todos os dados</button>
+    </div>
+  </div>
+</div>
+
+<div id="review" class="review">
+  <button id="btn-back-review" class="btn-floating" aria-label="Voltar">←</button>
+  <div class="review-img">
+    <img id="review-img" alt="Prévia da fotografia final">
+    <video id="review-video" controls playsinline hidden aria-label="Prévia do vídeo"></video>
+  </div>
+  <div class="review-actions">
+    <button id="discard" class="secondary">Descartar</button>
+    <button id="download" class="primary">Salvar / Baixar</button>
+    <button id="share" class="primary" hidden>Compartilhar</button>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+
+<script>
+'use strict';
+
+/* ============= UTILS ============= */
+const $ = (s, r=document) => r.querySelector(s);
+let toastTimer;
+function toast(msg, ms=3000) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+}
+function loadImage(url) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => rej(new Error('Falha ao carregar imagem.'));
+    i.src = url;
+  });
+}
+function safeName(n, fb='captura') {
+  const b = (n||fb).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/_+/g,'_')
+    .replace(/^_|_$/g,'').slice(0,80);
+  return b || fb;
+}
+function ts() {
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+function hexRgba(hex, a) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return `rgba(11,61,46,${a})`;
+  return `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${a})`;
+}
+
+/* ============= STORAGE (IndexedDB) ============= */
+const DB_NAME='et-db', DB_VER=1;
+let dbP=null;
+function openDB() {
+  if (dbP) return dbP;
+  dbP = new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings',{keyPath:'id'});
+      if (!db.objectStoreNames.contains('blobs')) db.createObjectStore('blobs',{keyPath:'id'});
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbP;
+}
+async function getSetting(k, d=null) {
+  try {
+    const db = await openDB();
+    return await new Promise((res, rej) => {
+      const req = db.transaction('settings','readonly').objectStore('settings').get(k);
+      req.onsuccess = () => res(req.result ? req.result.value : d);
+      req.onerror = () => rej(req.error);
+    });
+  } catch(e) { return d; }
+}
+async function setSetting(k, v) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('settings','readwrite');
+    tx.objectStore('settings').put({id:k, value:v});
+    tx.oncomplete = () => res(true);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function getBlob(k) {
+  try {
+    const db = await openDB();
+    return await new Promise((res, rej) => {
+      const r = db.transaction('blobs','readonly').objectStore('blobs').get(k);
+      r.onsuccess = () => res(r.result ? r.result.blob : null);
+      r.onerror = () => rej(r.error);
+    });
+  } catch(e) { return null; }
+}
+async function setBlob(k, b) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('blobs','readwrite');
+    tx.objectStore('blobs').put({id:k, blob:b});
+    tx.oncomplete = () => res(true);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function delBlob(k) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('blobs','readwrite');
+    tx.objectStore('blobs').delete(k);
+    tx.oncomplete = () => res(true);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function clearAll() {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(['settings','blobs'],'readwrite');
+    tx.objectStore('settings').clear();
+    tx.objectStore('blobs').clear();
+    tx.oncomplete = () => res(true);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+/* ============= SETTINGS ============= */
+const DEFAULTS = Object.freeze({
+  aspectRatio: '4:3',
+  logoEnabled: true, logoSizePercent: 15, logoMarginPercent: 3,
+  stampEnabled: true, defaultCaption: '',
+  stampBgColor: '#0B3D2E', stampTextColor: '#FFFFFF',
+  stampOpacity: 0.85, stampMaxWidthPercent: 55,
+  stampRadius: 16, includeDateTime: false,
+});
+let settings = {...DEFAULTS};
+let logoURL = null;
+let logoBlob = null;
+
+async function loadSettings() {
+  const saved = await getSetting('inst', null);
+  settings = {...DEFAULTS, ...(saved||{})};
+  logoBlob = await getBlob('logo');
+  if (logoBlob) logoURL = URL.createObjectURL(logoBlob);
+}
+async function persist(partial) {
+  settings = {...settings, ...partial};
+  try { await setSetting('inst', settings); return true; }
+  catch(e) { toast('Não foi possível salvar as configurações.'); return false; }
+}
+async function setLogo(file) {
+  if (!file) return false;
+  const ok = ['image/png','image/jpeg','image/webp'].includes(file.type);
+  if (!ok) { toast('Formato não suportado. Use PNG, JPEG ou WebP.'); return false; }
+  if (file.size > 5*1024*1024) { toast('Imagem maior que 5 MB.'); return false; }
+  try {
+    const u = URL.createObjectURL(file);
+    await loadImage(u);
+    URL.revokeObjectURL(u);
+    if (logoURL) URL.revokeObjectURL(logoURL);
+    await setBlob('logo', file);
+    logoBlob = file;
+    logoURL = URL.createObjectURL(file);
+    return true;
+  } catch(e) { toast('Imagem inválida ou corrompida.'); return false; }
+}
+async function removeLogo() {
+  try { await delBlob('logo'); } catch(_) {}
+  if (logoURL) URL.revokeObjectURL(logoURL);
+  logoBlob = null; logoURL = null;
+}
+
+function applyLiveStyles() {
+  const root = document.documentElement.style;
+  root.setProperty('--stamp-bg', hexRgba(settings.stampBgColor, settings.stampOpacity));
+  root.setProperty('--stamp-color', settings.stampTextColor);
+  root.setProperty('--stamp-radius', settings.stampRadius + 'px');
+  root.setProperty('--stamp-max-width', settings.stampMaxWidthPercent + 'vw');
+  const targetVw = Math.max(8, Math.min(40, settings.logoSizePercent * 1.5));
+  root.setProperty('--logo-size', targetVw + 'vw');
+  const stamp = $('#caption');
+  if (stamp) stamp.hidden = !settings.stampEnabled;
+}
+function syncLiveLogo() {
+  const img = $('#live-logo');
+  if (!img) return;
+  if (settings.logoEnabled && logoURL) {
+    img.src = logoURL; img.hidden = false;
+  } else {
+    img.hidden = true; img.removeAttribute('src');
+  }
+}
+
+/* ============= COMPOSITOR ============= */
+async function compose({photoBlob, w, h, captionText}) {
+  const url = URL.createObjectURL(photoBlob);
+  let img;
+  try { img = await loadImage(url); }
+  finally { URL.revokeObjectURL(url); }
+
+  const realW = img.naturalWidth || w;
+  const realH = img.naturalHeight || h;
+  const c = document.createElement('canvas');
+  c.width = realW; c.height = realH;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, realW, realH);
+
+  // Logomarca (canto superior direito)
+  if (settings.logoEnabled && logoURL) {
+    try {
+      const lg = await loadImage(logoURL);
+      const tw = realW * (settings.logoSizePercent/100);
+      const th = tw * (lg.naturalHeight/lg.naturalWidth);
+      const m = realW * (settings.logoMarginPercent/100);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.25)';
+      ctx.shadowBlur = Math.max(2, realW*0.004);
+      ctx.drawImage(lg, realW-tw-m, m, tw, th);
+      ctx.restore();
+    } catch(e) { console.warn('logo', e); }
+  }
+
+  // Estampa (canto inferior esquerdo)
+  if (settings.stampEnabled) {
+    let text = (captionText || '').trim();
+    if (settings.includeDateTime) {
+      const d = new Date();
+      text += (text?'\n':'') + d.toLocaleDateString('pt-BR') + ' ' +
+        d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    }
+    if (text) drawStamp(ctx, realW, realH, text);
+  }
+
+  const blob = await new Promise((res, rej) =>
+    c.toBlob(b => b ? res(b) : rej(new Error('Falha ao exportar.')), 'image/jpeg', 0.92));
+  c.width = 0; c.height = 0;
+  return blob;
+}
+
+function drawStamp(ctx, W, H, text) {
+  const margin = W * 0.035;
+  const padX = Math.max(8, W * 0.02);
+  const padY = Math.max(6, W * 0.015);
+  const maxW = Math.min(W * (settings.stampMaxWidthPercent/100), W - margin*2);
+  const innerMaxW = maxW - padX*2;
+  const fontStr = s => `600 ${s}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  const lh = 1.35;
+  let fs = Math.max(10, Math.round(W*0.028));
+  const minFs = Math.max(10, Math.round(W*0.012));
+
+  const wrap = (fontSize) => {
+    ctx.font = fontStr(fontSize);
+    const out = [];
+    for (const para of text.split('\n')) {
+      const words = para.split(/\s+/).filter(Boolean);
+      let line = '';
+      for (const word of words) {
+        const test = line ? line+' '+word : word;
+        if (ctx.measureText(test).width <= innerMaxW) {
+          line = test;
+        } else {
+          if (line) out.push(line);
+          if (ctx.measureText(word).width > innerMaxW) {
+            let chunk = '';
+            for (const ch of word) {
+              if (chunk && ctx.measureText(chunk+ch).width > innerMaxW) {
+                out.push(chunk); chunk = ch;
+              } else { chunk += ch; }
+            }
+            line = chunk;
+          } else { line = word; }
+        }
+      }
+      if (line) out.push(line);
+    }
+    return out.length ? out : [''];
+  };
+
+  let lines = wrap(fs);
+  let boxH = lines.length * fs * lh + padY*2;
+
+  while (boxH > H*0.6 && fs > minFs) {
+    fs -= 1;
+    lines = wrap(fs);
+    boxH = lines.length * fs * lh + padY*2;
+  }
+
+  ctx.font = fontStr(fs);
+  const widestLine = Math.max(...lines.map(l => ctx.measureText(l).width));
+  let boxW = Math.min(maxW, widestLine + padX*2);
+
+  const x = margin;
+  const y = H - boxH - margin;
+  boxW = Math.min(boxW, W - margin - x);
+
+  const r = Math.min(settings.stampRadius, boxH/2, boxW/2);
+
+  ctx.save();
+  ctx.fillStyle = hexRgba(settings.stampBgColor, settings.stampOpacity);
+  ctx.beginPath();
+  roundRect(ctx, x, y, boxW, boxH, r);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = Math.max(1, W*0.0015);
+  roundRect(ctx, x, y, boxW, boxH, r);
+  ctx.stroke();
+
+  ctx.fillStyle = settings.stampTextColor;
+  ctx.font = fontStr(fs);
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  lines.forEach((ln, i) => {
+    ctx.fillText(ln, x+padX, y+padY+i*fs*lh);
+  });
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+/* ============= CAPTURA E ROTAÇÃO ============= */
+function getScreenAngle() {
+  if (screen.orientation && typeof screen.orientation.angle === 'number') {
+    return screen.orientation.angle;
+  }
+  if (typeof window.orientation === 'number') {
+    return ((window.orientation % 360) + 360) % 360;
+  }
+  return 0;
+}
+
+async function captureOrientedFrame(video, targetRatioStr) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) throw new Error('Pré-visualização ainda não pronta.');
+
+  let targetAR = 4/3;
+  if (targetRatioStr === '16:9') targetAR = 16/9;
+  else if (targetRatioStr === '9:16') targetAR = 9/16;
+  else if (targetRatioStr === '1:1') targetAR = 1;
+
+  let angle = getScreenAngle();
+  let isLandscapeRaw = vw > vh;
+  let rotate = 0;
+
+  // Lógica matemática para alinhar o frame cru com a rotação do dispositivo
+  if (angle === 0 || angle === 180) {
+    if (isLandscapeRaw) rotate = angle === 0 ? -Math.PI/2 : Math.PI/2;
+    else rotate = angle === 0 ? 0 : Math.PI;
+  } else {
+    if (isLandscapeRaw) rotate = angle === 90 ? 0 : Math.PI;
+    else rotate = angle === 90 ? Math.PI/2 : -Math.PI/2;
+  }
+
+  let workingW = (Math.abs(rotate) === Math.PI/2) ? vh : vw;
+  let workingH = (Math.abs(rotate) === Math.PI/2) ? vw : vh;
+
+  // Desenha em um canvas temporário (já orientado corretamente)
+  const temp = document.createElement('canvas');
+  temp.width = workingW;
+  temp.height = workingH;
+  const tctx = temp.getContext('2d');
+
+  tctx.save();
+  tctx.translate(workingW/2, workingH/2);
+  tctx.rotate(rotate);
+  tctx.drawImage(video, -vw/2, -vh/2, vw, vh);
+  tctx.restore();
+
+  // Recorta o centro para o Aspect Ratio escolhido (Cover)
+  const workingAR = workingW / workingH;
+  let cropW = workingW, cropH = workingH, offX = 0, offY = 0;
+  if (workingAR > targetAR) {
+    cropW = workingH * targetAR;
+    offX = (workingW - cropW) / 2;
+  } else if (workingAR < targetAR) {
+    cropH = workingW / targetAR;
+    offY = (workingH - cropH) / 2;
+  }
+
+  // Redimensiona para performance
+  const maxEdge = 1920;
+  const scale = Math.min(1, maxEdge / Math.max(cropW, cropH));
+  const finalW = Math.round(cropW * scale);
+  const finalH = Math.round(cropH * scale);
+
+  const out = document.createElement('canvas');
+  out.width = finalW;
+  out.height = finalH;
+  const octx = out.getContext('2d');
+  octx.drawImage(temp, offX, offY, cropW, cropH, 0, 0, finalW, finalH);
+
+  const blob = await new Promise((res, rej) =>
+    out.toBlob(b => b ? res(b) : rej(new Error('Falha ao capturar.')), 'image/jpeg', 0.92));
+
+  temp.width = 0; temp.height = 0;
+  out.width = 0; out.height = 0;
+
+  return { blob, w: finalW, h: finalH };
+}
+
+/* ============= CAMERA ============= */
+let stream = null;
+let facing = 'environment';
+let mediaRecorder = null;
+let recordedChunks = [];
+let videoMime = '';
+
+async function startCamera() {
+  stopCamera();
+  setStatus('Solicitando permissão…');
+  $('#btn-photo').disabled = true;
+  $('#btn-video').disabled = true;
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('API de câmera indisponível. Use HTTPS ou localhost.');
+    }
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: facing }, width: {ideal:1920}, height: {ideal:1080} }
+    });
+    const v = $('#preview');
+    v.srcObject = stream;
+    await v.play().catch(() => {});
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    $('#switch-cam').disabled = cams.length < 2;
+    $('#btn-photo').disabled = false;
+    $('#btn-video').disabled = false;
+    setStatus('Câmera pronta');
+  } catch(e) {
+    setStatus('Erro: ' + (e.name || ''));
+    toast(cameraError(e));
+  }
+}
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  const v = $('#preview'); if (v) v.srcObject = null;
+}
+async function switchCamera() {
+  facing = facing === 'environment' ? 'user' : 'environment';
+  await startCamera();
+}
+function cameraError(e) {
+  switch(e.name) {
+    case 'NotAllowedError': return 'Permissão negada. Libere o acesso nas configurações do navegador.';
+    case 'NotFoundError': return 'Nenhuma câmera encontrada.';
+    case 'NotReadableError': return 'Câmera ocupada por outro aplicativo.';
+    case 'OverconstrainedError': return 'A câmera não suporta a resolução solicitada.';
+    default: return e.message || 'Falha ao acessar a câmera.';
+  }
+}
+function setStatus(t) { $('#status').textContent = t; }
+
+async function takePhoto() {
+  if (!stream) return;
+  $('#btn-photo').disabled = true;
+  setStatus('Capturando…');
+  try {
+    const video = $('#preview');
+    const { blob, w, h } = await captureOrientedFrame(video, settings.aspectRatio);
+    const captionText = ($('#caption').innerText || $('#caption').textContent || '').trim();
+    const finalBlob = await compose({photoBlob: blob, w, h, captionText});
+    showReview(finalBlob, false);
+    setStatus('Câmera pronta');
+  } catch(e) {
+    toast(e.message || 'Falha na captura.');
+    setStatus('Erro na captura');
+  } finally {
+    if (stream) $('#btn-photo').disabled = false;
+  }
+}
+
+async function toggleVideoRecording() {
+  const btn = $('#btn-video');
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    btn.classList.remove('recording');
+    setStatus('Câmera pronta');
+    $('#btn-photo').disabled = false;
+  } else {
+    if (!stream) return;
+    try {
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
+      const tracks = [...stream.getVideoTracks()];
+      if (audioStream) tracks.push(...audioStream.getAudioTracks());
+      const combined = new MediaStream(tracks);
+
+      recordedChunks = [];
+      videoMime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+      mediaRecorder = new MediaRecorder(combined, { mimeType: videoMime });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: videoMime });
+        showReview(blob, true);
+      };
+
+      mediaRecorder.start();
+      btn.classList.add('recording');
+      setStatus('Gravando…');
+      $('#btn-photo').disabled = true;
+    } catch(e) {
+      toast('Erro ao iniciar gravação: microfone pode estar bloqueado.');
+    }
+  }
+}
+
+/* ============= REVIEW ============= */
+let reviewBlob = null, reviewURL = null, isVideoReview = false;
+function showReview(blob, isVideo) {
+  if (reviewURL) URL.revokeObjectURL(reviewURL);
+  reviewBlob = blob;
+  reviewURL = URL.createObjectURL(blob);
+  isVideoReview = isVideo;
+
+  const img = $('#review-img');
+  const vid = $('#review-video');
+
+  if (isVideo) {
+    img.hidden = true;
+    vid.hidden = false;
+    vid.src = reviewURL;
+  } else {
+    vid.hidden = true;
+    img.hidden = false;
+    img.src = reviewURL;
+  }
+
+  $('#review').classList.add('open');
+  
+  const ext = isVideo ? 'webm' : 'jpg';
+  const f = new File([blob], `captura_${ts()}.${ext}`, {type: isVideo ? videoMime : 'image/jpeg'});
+  const canShare = !!(navigator.canShare && navigator.share);
+  let can = false;
+  if (canShare) { try { can = navigator.canShare({files:[f]}); } catch(_) {} }
+  $('#share').hidden = !can;
+}
+
+function closeReview() {
+  $('#review').classList.remove('open');
+  if (reviewURL) URL.revokeObjectURL(reviewURL);
+  reviewURL = null; reviewBlob = null;
+  $('#share').hidden = true;
+  const vid = $('#review-video');
+  vid.pause();
+  vid.src = '';
+}
+
+function download() {
+  if (!reviewBlob) return;
+  const ext = isVideoReview ? 'webm' : 'jpg';
+  const url = URL.createObjectURL(reviewBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `captura_${ts()}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  toast('Download iniciado.');
+}
+
+async function share() {
+  if (!reviewBlob) return;
+  const ext = isVideoReview ? 'webm' : 'jpg';
+  const f = new File([reviewBlob], `captura_${ts()}.${ext}`, {type: isVideoReview ? videoMime : 'image/jpeg'});
+  try { await navigator.share({files:[f], title:'Captura institucional'}); }
+  catch(e) { if (e.name !== 'AbortError') toast('Compartilhamento indisponível.'); }
+}
+
+/* ============= SETTINGS UI ============= */
+function syncForm() {
+  $('#aspect-ratio').value = settings.aspectRatio || '4:3';
+  $('#logo-size').value = settings.logoSizePercent;
+  $('#logo-size-v').textContent = settings.logoSizePercent;
+  $('#logo-margin').value = settings.logoMarginPercent;
+  $('#logo-margin-v').textContent = settings.logoMarginPercent;
+  $('#logo-enabled').checked = !!settings.logoEnabled;
+  $('#default-caption').value = settings.defaultCaption || '';
+  $('#bg-color').value = settings.stampBgColor;
+  $('#text-color').value = settings.stampTextColor;
+  $('#opacity').value = Math.round(settings.stampOpacity*100);
+  $('#opacity-v').textContent = Math.round(settings.stampOpacity*100);
+  $('#maxw').value = settings.stampMaxWidthPercent;
+  $('#maxw-v').textContent = settings.stampMaxWidthPercent;
+  $('#radius').value = settings.stampRadius;
+  $('#radius-v').textContent = settings.stampRadius;
+  $('#stamp-enabled').checked = !!settings.stampEnabled;
+  $('#include-datetime').checked = !!settings.includeDateTime;
+  if (logoURL) {
+    $('#logo-preview').src = logoURL;
+    $('#logo-preview').hidden = false;
+    $('#remove-logo').hidden = false;
+  } else {
+    $('#logo-preview').hidden = true;
+    $('#logo-preview').removeAttribute('src');
+    $('#remove-logo').hidden = true;
+  }
+  syncLiveLogo();
+  applyLiveStyles();
+  drawPreview();
+}
+function collectForm() {
+  return {
+    aspectRatio: $('#aspect-ratio').value,
+    logoEnabled: $('#logo-enabled').checked,
+    logoSizePercent: +$('#logo-size').value,
+    logoMarginPercent: +$('#logo-margin').value,
+    stampEnabled: $('#stamp-enabled').checked,
+    defaultCaption: $('#default-caption').value.trim(),
+    stampBgColor: $('#bg-color').value,
+    stampTextColor: $('#text-color').value,
+    stampOpacity: +$('#opacity').value/100,
+    stampMaxWidthPercent: +$('#maxw').value,
+    stampRadius: +$('#radius').value,
+    includeDateTime: $('#include-datetime').checked,
+  };
+}
+function drawPreview() {
+  const c = $('#preview-canvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const g = ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'#9EC9B4'); g.addColorStop(1,'#4E8F74');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  const s = collectForm();
+  if (s.logoEnabled && logoURL) {
+    const im = new Image();
+    im.onload = () => {
+      const tw = W*(s.logoSizePercent/100);
+      const th = tw*(im.naturalHeight/im.naturalWidth);
+      const m = W*(s.logoMarginPercent/100);
+      ctx.drawImage(im, W-tw-m, m, tw, th);
+      previewStamp(ctx, W, H, s);
+    };
+    im.src = logoURL;
+  } else {
+    previewStamp(ctx, W, H, s);
+  }
+}
+function previewStamp(ctx, W, H, s) {
+  if (!s.stampEnabled) return;
+  const txt = (s.defaultCaption || 'Descrição de exemplo').trim();
+  const fs = Math.max(9, Math.round(W*0.032));
+  ctx.font = `600 ${fs}px system-ui,sans-serif`;
+  const pad = W*0.025;
+  const maxW = W*(s.stampMaxWidthPercent/100);
+  const mw = Math.min(maxW, ctx.measureText(txt).width + pad*2);
+  const bh = fs*1.8 + pad;
+  const x = W*0.04, y = H-bh-H*0.04;
+  ctx.save();
+  ctx.fillStyle = hexRgba(s.stampBgColor, s.stampOpacity);
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, mw, bh, s.stampRadius);
+  else ctx.rect(x, y, mw, bh);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.fillStyle = s.stampTextColor;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(txt.length>28 ? txt.slice(0,27)+'…' : txt, x+pad, y+bh/2);
+  ctx.restore();
+}
+
+/* ============= BOOTSTRAP ============= */
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadSettings();
+  syncForm();
+  if (settings.defaultCaption) {
+    $('#caption').textContent = settings.defaultCaption;
+    $('#caption').removeAttribute('data-empty');
+  } else {
+    $('#caption').setAttribute('data-empty', 'true');
+  }
+
+  // Bindings de Câmera
+  $('#btn-photo').addEventListener('click', takePhoto);
+  $('#btn-video').addEventListener('click', toggleVideoRecording);
+  $('#switch-cam').addEventListener('click', switchCamera);
+
+  const captionEl = $('#caption');
+  function updateCaptionEmpty() {
+    if (captionEl.textContent.trim()) captionEl.removeAttribute('data-empty');
+    else captionEl.setAttribute('data-empty', 'true');
+  }
+  captionEl.addEventListener('input', () => {
+    const len = captionEl.innerText.length;
+    if (len > 200) {
+      captionEl.innerText = captionEl.innerText.slice(0, 200);
+      const r = document.createRange();
+      r.selectNodeContents(captionEl);
+      r.collapse(false);
+      const s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+    }
+    updateCaptionEmpty();
+  });
+  captionEl.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text.slice(0, 200));
+  });
+  updateCaptionEmpty();
+
+  // Bindings de Configurações
+  $('#open-settings').addEventListener('click', () => {
+    syncForm();
+    $('#settings-panel').classList.add('open');
+  });
+  $('#close-settings').addEventListener('click', () => $('#settings-panel').classList.remove('open'));
+  $('#save-settings').addEventListener('click', async () => {
+    const ok = await persist(collectForm());
+    if (ok) {
+      toast('Configurações salvas.');
+      const cur = captionEl.innerText.trim();
+      if (settings.defaultCaption && !cur) {
+        captionEl.textContent = settings.defaultCaption;
+        captionEl.removeAttribute('data-empty');
+      }
+      syncLiveLogo();
+      applyLiveStyles();
+    }
+  });
+  $('#reset-settings').addEventListener('click', async () => {
+    if (!confirm('Restaurar padrões? A logomarca também será removida.')) return;
+    settings = {...DEFAULTS};
+    await setSetting('inst', settings);
+    await removeLogo();
+    syncForm();
+    toast('Padrões restaurados.');
+  });
+  $('#clear-all').addEventListener('click', async () => {
+    if (!confirm('Apagar todos os dados locais? Arquivos baixados permanecem.')) return;
+    await clearAll();
+    await removeLogo();
+    settings = {...DEFAULTS};
+    syncForm();
+    toast('Dados apagados.');
+  });
+  $('#logo-input').addEventListener('change', async ev => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    if (await setLogo(f)) {
+      syncForm();
+      toast('Logomarca importada. Salve para aplicar.');
+    }
+  });
+  $('#remove-logo').addEventListener('click', async () => {
+    await removeLogo();
+    $('#logo-input').value = '';
+    syncForm();
+  });
+  ['#aspect-ratio','#logo-size','#logo-margin','#logo-enabled','#default-caption','#bg-color',
+   '#text-color','#opacity','#maxw','#radius','#stamp-enabled','#include-datetime'
+  ].forEach(sel => {
+    const el = $(sel);
+    el.addEventListener('input', () => {
+      $('#logo-size-v').textContent = $('#logo-size').value;
+      $('#logo-margin-v').textContent = $('#logo-margin').value;
+      $('#opacity-v').textContent = $('#opacity').value;
+      $('#maxw-v').textContent = $('#maxw').value;
+      $('#radius-v').textContent = $('#radius').value;
+      drawPreview();
+    });
+  });
+
+  // Bindings de Revisão
+  $('#btn-back-review').addEventListener('click', closeReview);
+  $('#discard').addEventListener('click', closeReview);
+  $('#download').addEventListener('click', download);
+  $('#share').addEventListener('click', share);
+
+  await startCamera();
+});
+
+window.addEventListener('pagehide', () => {
+    stopCamera();
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+});
+
+/* ============= SERVICE WORKER ============= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', {scope: './'})
+      .then(reg => console.log('[SW] registrado:', reg.scope))
+      .catch(err => console.warn('[SW] falha:', err));
+  });
+}
+</script>
+</body>
+</html>

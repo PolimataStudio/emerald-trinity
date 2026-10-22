@@ -1,0 +1,26 @@
+/
+├── index.html
+├── manifest.webmanifest
+├── sw.js
+├── css/
+│   └── styles.css
+├── js/
+│   ├── app.js
+│   ├── storage.js
+│   ├── settings.js
+│   ├── camera.js
+│   ├── image-compositor.js
+│   ├── video-recorder.js
+│   └── utils.js
+├── assets/
+│   ├── icons/
+│   │   ├── icon-192.png
+│   │   ├── icon-512.png
+│   │   └── maskable-512.png
+│   └── images/
+│       └── placeholder-logo.svg
+├── offline.html
+├── README.md
+├── TESTING.md
+└── .well-known/
+    └── assetlinks.json (placeholder para TWA)
