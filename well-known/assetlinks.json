@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.org.suaassociacao.emeraldtrinity",
+      "sha256_cert_fingerprints": [
+        "SUBSTITUA_PELA_IMPRESSÃO_DIGITAL_SHA256_DO_SEU_CERTIFICADO_DE_ASSINATURA"
+      ]
+    }
+  }
+]
